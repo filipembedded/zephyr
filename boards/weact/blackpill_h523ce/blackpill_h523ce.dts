@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2025 Filip Stojanovic <filipembedded@gmail.com>
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/dts-v1/;
+#include <st/h5/stm32h533.dtsi>
+
+/ {
+    model = "WeAct Studio Black Pill STM32H523 Board";
+    compatible = "weact,blackpill-h523ce";
+
+    chosen {
+        zephyr,console = &usart1;
+        zephyr,shell-uart = &usart1;
+        zephyr,code-partition = 
+        zephyr,sram = 
+        zephyr,flash = 
+    };
+
+	leds {
+		compatible = "gpio-leds";
+		user_led: led {
+			gpios = <&gpioc 13 GPIO_ACTIVE_LOW>;
+			label = "User LED";
+		};
+	};
+
+	gpio_keys {
+		compatible = "gpio-keys";
+		user_button: button {
+			label = "KEY";
+			gpios = <&gpioa 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+
+    aliases {
+		led0 = &user_led;
+		sw0 = &user_button;
+		volt-sensor0 = &vref;
+		volt-sensor1 = &vbat;
+    };
+};
+
+&clk_lsi {
+	status = "okay";
+};
+
+&clk_hse {
+	clock-frequency = <DT_FREQ_M(25)>;
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(240)>;
+	ahb-prescaler = <1>; //NOTE: Check this!
+	apb1-prescaler = <2>; //NOTE: Check this!
+	apb2-prescaler = <1>; //NOTE: Check this!
+};
+
+// NOTE: Add another nodes: &Check pll node
