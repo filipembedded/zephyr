@@ -37,6 +37,9 @@ LOG_MODULE_REGISTER(BME280, CONFIG_SENSOR_LOG_LEVEL);
 #define BME280_EXPECTED_SAMPLE_TIME_MS                                                             \
 	1 + BME280_TEMP_SAMPLE_TIME + BME280_PRESS_SAMPLE_TIME + BME280_HUMIDITY_SAMPLE_TIME
 
+/* Number of trials for chip id read */
+#define BME280_CHIP_ID_READ_RETRY_CNT 10
+
 BUILD_ASSERT(BME280_EXPECTED_SAMPLE_TIME_MS < BME280_MEASUREMENT_TIMEOUT_MS,
 	     "Expected duration over timeout duration");
 
@@ -332,20 +335,43 @@ static int bme280_chip_init(const struct device *dev)
 		return err;
 	}
 
-	err = bme280_reg_read(dev, BME280_REG_ID, &data->chip_id, 1);
-	if (err < 0) {
-		LOG_DBG("ID read failed: %d", err);
-		return err;
-	}
+	/* 
+		Low quality BMP280 sensors can boot longer than usual, code bellow 
+		handles that MCU tries multiple times until sensor wakes up, or not. 
+	*/
+	for (int i = 0; i < BME280_CHIP_ID_READ_RETRY_CNT; i++)
+	{
+		k_msleep(1);
 
-	if (data->chip_id == BME280_CHIP_ID) {
-		LOG_DBG("ID OK");
-	} else if (data->chip_id == BMP280_CHIP_ID_MP ||
-		   data->chip_id == BMP280_CHIP_ID_SAMPLE_1) {
-		LOG_DBG("ID OK (BMP280)");
-	} else {
-		LOG_DBG("bad chip id 0x%x", data->chip_id);
-		return -ENOTSUP;
+		err = bme280_reg_read(dev, BME280_REG_ID, &data->chip_id, 1);
+		if (err < 0) {
+			if (i < 10) {
+				LOG_DBG("ID read failed: %d", err);
+				LOG_DBG("Trying again, trial: %d", i);
+				continue;
+			} else {
+				LOG_DBG("ID read failed after %d times: ", i);
+				return err;
+			}
+		}
+
+		if (data->chip_id == BME280_CHIP_ID) {
+			LOG_DBG("ID OK");
+			break;
+		} else if (data->chip_id == BMP280_CHIP_ID_MP ||
+				data->chip_id == BMP280_CHIP_ID_SAMPLE_1) {
+			LOG_DBG("ID OK (BMP280)");
+			break;
+		} else {
+			if (i < BME280_CHIP_ID_READ_RETRY_CNT) {
+				LOG_DBG("Bad chip id 0x%x", data->chip_id);
+				LOG_DBG("Trying again, trial: %d", i);
+				continue;
+			} else {
+				LOG_DBG("Bad chip ID returned after %d trials", i);				
+				return -ENOTSUP;
+			}
+		}
 	}
 
 	/* reset the sensor. This will put the sensor is sleep mode */
