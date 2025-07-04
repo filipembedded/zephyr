@@ -1592,6 +1592,8 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 		return NULL;
 	}
 
+	__ASSERT_NO_MSG(conn->state == BT_CONN_CONNECTED);
+
 	struct bt_l2cap_br_chan *br_chan;
 
 	br_chan = CONTAINER_OF(pdu_ready, struct bt_l2cap_br_chan, _pdu_ready);
@@ -1609,12 +1611,14 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 
 	__ASSERT(tx_pdu, "signaled ready but no PDUs in the TX queue");
 
-	struct net_buf *pdu = CONTAINER_OF(tx_pdu, struct net_buf, node);
+	struct net_buf *q_pdu = CONTAINER_OF(tx_pdu, struct net_buf, node);
 
-	if (bt_buf_has_view(pdu)) {
-		LOG_ERR("already have view on %p", pdu);
+	if (bt_buf_has_view(q_pdu)) {
+		LOG_ERR("already have view on %p", q_pdu);
 		return NULL;
 	}
+
+	struct net_buf *pdu = net_buf_ref(q_pdu);
 
 	/* We can't interleave ACL fragments from different channels for the
 	 * same ACL conn -> we have to wait until a full L2 PDU is transferred
@@ -1623,12 +1627,14 @@ struct net_buf *l2cap_br_data_pull(struct bt_conn *conn, size_t amount, size_t *
 	bool last_frag = amount >= pdu->len;
 
 	if (last_frag) {
-		LOG_DBG("last frag, removing %p", pdu);
+		LOG_DBG("last frag, removing %p", q_pdu);
 		__maybe_unused bool found;
 
-		found = sys_slist_find_and_remove(&br_chan->_pdu_tx_queue, &pdu->node);
+		found = sys_slist_find_and_remove(&br_chan->_pdu_tx_queue, &q_pdu->node);
 
 		__ASSERT_NO_MSG(found);
+
+		net_buf_unref(q_pdu);
 
 		LOG_DBG("chan %p done", br_chan);
 		lower_data_ready(br_chan);
@@ -4664,11 +4670,16 @@ int bt_l2cap_br_chan_connect(struct bt_conn *conn, struct bt_l2cap_chan *chan, u
 		return -EBUSY;
 	}
 
+	if (!br_chan->rx.mtu) {
+		br_chan->rx.mtu = BT_L2CAP_RX_MTU;
+	}
 #if defined(CONFIG_BT_L2CAP_RET_FC)
 	err = l2cap_br_check_chan_config(conn, br_chan);
 	if (err) {
 		return err;
 	}
+#else
+	br_chan->rx.mtu = MIN(br_chan->rx.mtu, BT_L2CAP_RX_MTU);
 #endif /* CONFIG_BT_L2CAP_RET_FC */
 
 	if (!l2cap_br_chan_add(conn, chan, l2cap_br_chan_destroy)) {
