@@ -65,7 +65,7 @@ shields:
 - ``m2mem_xspi`` for the serial NOR interface
 - ``m2mem_ldo_en`` for module power-cycle/reset control
 
-The current in-tree host-board implementation is ``nucleo_u3c5zi_q``.
+The current in-tree host-board implementation is ``nucleo_u3c5zi_q`` and ``nucleo_c5a3zg``.
 
 Programming
 ***********
@@ -92,6 +92,8 @@ can target it consistently (for example through a ``flash0`` alias). The device
 can be explored with the :zephyr:code-sample:`flash-shell` sample. The common
 identification EEPROM is described in Devicetree and can be accessed by
 applications through the :ref:`EEPROM driver API <eeprom_api>`.
+
+The same command also works with ``nucleo_c5a3zg`` as the host board.
 
 References
 **********
