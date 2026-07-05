@@ -52,11 +52,31 @@ config MSPI_STM32_XSPI
 	bool "STM32 XSPI Controller driver"
 	depends on DT_HAS_ST_STM32_XSPI_CONTROLLER_ENABLED
 	default y
-	select USE_STM32_HAL_XSPI
 	select USE_STM32_LL_DLYB
 	select USE_STM32_HAL_DMA
 	select USE_STM32_HAL_DMA_EX
 	help
 	  Enable XSPI driver for STM32 family of processors.
+
+if MSPI_STM32_XSPI
+
+choice MSPI_STM32_XSPI_HAL_API_VERSION
+	prompt "STM32Cube HAL XSPI version"
+
+config MSPI_STM32_XSPI_HAL2_API
+	bool "Use official STM32Cube2 HAL driver"
+	depends on STM32_HAL2
+	help
+	  Use the official STM32Cube2 HAL driver instead of the legacy one.
+
+config MSPI_STM32_XSPI_HAL_API_V1
+	bool "Use legacy STM32Cube HAL driver"
+	select USE_STM32_HAL_XSPI
+	help
+	  Driver version based on the legacy STM32Cube HAL API.
+
+endchoice
+
+endif # MSPI_STM32_XSPI
 
 endif # MSPI_STM32_CONTROLLER
