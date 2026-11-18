@@ -1,0 +1,68 @@
+# Copyright (c) 2026 Filip Stojanovic <filipembedded@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "MSPI NOR stress test"
+
+config MSPI_STRESS_REGION_MANUAL
+	bool "Select the test region manually"
+	help
+	  By default the test uses the top 1 MiB of the partition labelled
+	  "storage" on the device under test, or the top 1 MiB of the device
+	  when it has no partitions. Enable this to give the offset yourself.
+	  Data in the region is overwritten.
+
+config MSPI_STRESS_REGION_OFFSET
+	hex "Test region offset"
+	depends on MSPI_STRESS_REGION_MANUAL
+	default 0x0
+	help
+	  Absolute offset of the 1 MiB test region. Must be 64 KiB aligned.
+
+config MSPI_STRESS_OUTSIDE_REGION
+	bool "Allow writes outside the test region"
+	help
+	  Run the tests that erase the sectors around the 16 MiB boundary and
+	  the last sector of the device. Data there is lost.
+
+config MSPI_STRESS_PRBS_SEED
+	hex "Seed of the pseudo random data"
+	default 0x1d872b41
+	help
+	  Change it to get different data; the value is printed at start so a
+	  failing run can be repeated with the same data.
+
+config MSPI_STRESS_BIG_READ_SIZE
+	int "Size of the single large read, in bytes"
+	default 32768
+	range 8192 65536
+
+config MSPI_STRESS_CONCURRENCY_SECONDS
+	int "Duration of the concurrency test, in seconds"
+	default 5
+
+config MSPI_STRESS_ERASE_BUDGET
+	int "Maximum erases of one sector in a single run"
+	default 50
+	help
+	  The run fails if any sector of the region was erased more often,
+	  which would point to a runaway loop. A full run erases each sector
+	  only a few times.
+
+config MSPI_STRESS_REBOOT_LOOP
+	bool "Warm reboot loop test"
+	select REBOOT
+	help
+	  Each reboot only resets the MCU, so the flash stays in the mode the
+	  driver left it in and the next init must cope. Every boot re-runs
+	  only the S7 suite.
+
+config MSPI_STRESS_REBOOT_CYCLES
+	int "Number of warm reboots"
+	default 5 if MSPI_STRESS_REBOOT_LOOP
+	default 0
+
+# Boots inside the reboot loop skip every suite except S7 on purpose.
+config ZTEST_VERIFY_RUN_ALL
+	default n if MSPI_STRESS_REBOOT_LOOP
+
+source "Kconfig.zephyr"

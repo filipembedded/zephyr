@@ -1,0 +1,39 @@
+common:
+  tags:
+    - drivers
+    - flash
+    - mspi
+  filter: dt_compat_enabled("jedec,nor")
+  harness: ztest
+  timeout: 300
+  platform_allow:
+    - stm32h7b3i_dk
+    - nucleo_u3c5zi_q
+    - nucleo_c5a3zg
+  integration_platforms:
+    - stm32h7b3i_dk
+tests:
+  drivers.mspi.flash_stress:
+    extra_args:
+      - platform:nucleo_u3c5zi_q:SHIELD=b_m2mem_pack1_mb1928_33lb
+      - platform:nucleo_c5a3zg:SHIELD=b_m2mem_pack1_mb1928_33lb
+  drivers.mspi.flash_stress.pm_device:
+    extra_configs:
+      - CONFIG_PM_DEVICE=y
+    extra_args:
+      - platform:nucleo_u3c5zi_q:SHIELD=b_m2mem_pack1_mb1928_33lb
+      - platform:nucleo_c5a3zg:SHIELD=b_m2mem_pack1_mb1928_33lb
+  drivers.mspi.flash_stress.dma:
+    filter: CONFIG_DMA
+    extra_configs:
+      - CONFIG_MSPI_DMA=y
+    extra_args:
+      - platform:nucleo_u3c5zi_q:SHIELD=b_m2mem_pack1_mb1928_33lb
+      - platform:nucleo_c5a3zg:SHIELD=b_m2mem_pack1_mb1928_33lb
+  drivers.mspi.flash_stress.reboot_loop:
+    extra_configs:
+      - CONFIG_MSPI_STRESS_REBOOT_LOOP=y
+    extra_args:
+      - platform:nucleo_u3c5zi_q:SHIELD=b_m2mem_pack1_mb1928_33lb
+      - platform:nucleo_c5a3zg:SHIELD=b_m2mem_pack1_mb1928_33lb
+    build_only: true
